@@ -98,13 +98,13 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_GENDER, default="male"): SelectSelector(
                         SelectSelectorConfig(
                             options=GENDER_OPTIONS,
-                            translation_key="gender",
+                            mode="dropdown",
                         )
                     ),
                     vol.Required(CONF_ACTIVITY_LEVEL, default="moderate"): SelectSelector(
                         SelectSelectorConfig(
                             options=ACTIVITY_OPTIONS,
-                            translation_key="activity_level",
+                            mode="dropdown",
                         )
                     ),
                 }
@@ -146,7 +146,14 @@ class AdvBiaScaleOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "invalid_input"
 
             if not errors:
-                return self.async_create_entry(title="", data=user_input)
+                # Обновляем config_entry.data и перезагружаем интеграцию,
+                # чтобы сенсоры сразу использовали новые значения.
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    data={**self.config_entry.data, **user_input},
+                )
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
             step_id="init",
@@ -161,6 +168,15 @@ class AdvBiaScaleOptionsFlow(config_entries.OptionsFlow):
                         default=self.config_entry.data.get(CONF_AGE, 30),
                     ): vol.All(vol.Coerce(int), vol.Range(min=5, max=120)),
                     vol.Required(
+                        CONF_GENDER,
+                        default=self.config_entry.data.get(CONF_GENDER, "male"),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=GENDER_OPTIONS,
+                            mode="dropdown",
+                        )
+                    ),
+                    vol.Required(
                         CONF_ACTIVITY_LEVEL,
                         default=self.config_entry.data.get(
                             CONF_ACTIVITY_LEVEL, "moderate"
@@ -168,7 +184,7 @@ class AdvBiaScaleOptionsFlow(config_entries.OptionsFlow):
                     ): SelectSelector(
                         SelectSelectorConfig(
                             options=ACTIVITY_OPTIONS,
-                            translation_key="activity_level",
+                            mode="dropdown",
                         )
                     ),
                 }
