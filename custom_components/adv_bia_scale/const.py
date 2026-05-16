@@ -134,7 +134,7 @@ SENSOR_TYPES = {
 
 # Ключи конфигурации
 CONF_HEIGHT = "height"
-CONF_AGE = "age"
+CONF_BIRTH_DATE = "birth_date"
 CONF_GENDER = "gender"
 CONF_ACTIVITY_LEVEL = "activity_level"
 CONF_SCALE_MAC = "scale_mac"
@@ -312,3 +312,17 @@ def calculate_fat_free_mass(weight_kg, body_fat_percent):
     if weight_kg <= 0:
         return 0.0
     return round(weight_kg * (1 - body_fat_percent / 100), 2)
+
+
+def calculate_age(birth_date):
+    """Вычислить возраст из строки даты рождения (DD.MM.YYYY)."""
+    from datetime import date, datetime
+    try:
+        dt = datetime.strptime(birth_date, "%d.%m.%Y").date()
+    except (ValueError, TypeError):
+        return 30
+    today = date.today()
+    age = today.year - dt.year
+    if today.month < dt.month or (today.month == dt.month and today.day < dt.day):
+        age -= 1
+    return max(0, age)

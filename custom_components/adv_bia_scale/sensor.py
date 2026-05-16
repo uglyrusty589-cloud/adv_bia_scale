@@ -40,7 +40,7 @@ from .const import (
     SENSOR_SUBCUTANEOUS_FAT,
     SENSOR_HEART_RATE,
     CONF_HEIGHT,
-    CONF_AGE,
+    CONF_BIRTH_DATE,
     CONF_GENDER,
     CONF_ACTIVITY_LEVEL,
     MANUFACTURER_ID_OKOK,
@@ -58,6 +58,7 @@ from .const import (
     calculate_subcutaneous_fat,
     calculate_fat_free_mass,
     calculate_tdee,
+    calculate_age,
 )
 from .parser import parse_okok_advertisement
 
@@ -158,7 +159,12 @@ class BiaScaleCoordinator(DataUpdateCoordinator):
             }
 
         height = self.entry.data.get(CONF_HEIGHT, 175)
-        age = self.entry.data.get(CONF_AGE, 30)
+        birth_date = self.entry.data.get(CONF_BIRTH_DATE)
+        if birth_date:
+            age = calculate_age(birth_date)
+        else:
+            # Fallback для старых записей (legacy age field или birth_day/month/year)
+            age = self.entry.data.get("age", 30)
         gender = self.entry.data.get(CONF_GENDER, "male")
         activity = self.entry.data.get(CONF_ACTIVITY_LEVEL, "moderate")
 

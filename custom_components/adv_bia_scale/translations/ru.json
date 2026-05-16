@@ -8,7 +8,7 @@
           "mac": "MAC-адрес весов",
           "name": "Имя устройства",
           "height": "Рост, см (50–250)",
-          "age": "Возраст, лет (5–120)",
+          "birth_date": "Дата рождения (DD.MM.YYYY)",
           "gender": "Пол",
           "activity_level": "Уровень активности"
         }
@@ -16,7 +16,8 @@
     },
     "error": {
       "invalid_height": "Рост должен быть от 50 до 250 см",
-      "invalid_age": "Возраст должен быть от 5 до 120 лет",
+      "invalid_date": "Укажите корректную дату рождения",
+      "invalid_date_format": "Формат: DD.MM.YYYY",
       "invalid_input": "Неверный формат данных",
       "cannot_connect": "Ошибка подключения",
       "invalid_auth": "Ошибка аутентификации",
@@ -34,7 +35,8 @@
         "description": "Обновите ваш профиль. Новые замеры будут пересчитаны автоматически.",
         "data": {
           "height": "Рост, см (50–250)",
-          "age": "Возраст, лет (5–120)",
+          "birth_date": "Дата рождения (DD.MM.YYYY)",
+          "gender": "Пол",
           "activity_level": "Уровень активности"
         }
       }
@@ -59,51 +61,21 @@
   },
   "entity": {
     "sensor": {
-      "weight": {
-        "name": "Вес"
-      },
-      "impedance": {
-        "name": "Импеданс"
-      },
-      "bmi": {
-        "name": "ИМТ"
-      },
-      "body_fat": {
-        "name": "Жировая масса"
-      },
-      "muscle_mass": {
-        "name": "Мышечная масса"
-      },
-      "water": {
-        "name": "Вода"
-      },
-      "bone_mass": {
-        "name": "Масса костей"
-      },
-      "visceral_fat": {
-        "name": "Висцеральный жир"
-      },
-      "bmr": {
-        "name": "Базовый обмен"
-      },
-      "metabolic_age": {
-        "name": "Метаболический возраст"
-      },
-      "body_type": {
-        "name": "Тип тела"
-      },
-      "protein": {
-        "name": "Протеины"
-      },
-      "fat_free_mass": {
-        "name": "Масса без жира"
-      },
-      "subcutaneous_fat": {
-        "name": "Подкожный жир"
-      },
-      "heart_rate": {
-        "name": "Пульс"
-      }
+      "weight": {"name": "Вес"},
+      "impedance": {"name": "Импеданс"},
+      "bmi": {"name": "ИМТ"},
+      "body_fat": {"name": "Жировая масса"},
+      "muscle_mass": {"name": "Мышечная масса"},
+      "water": {"name": "Вода"},
+      "bone_mass": {"name": "Масса костей"},
+      "visceral_fat": {"name": "Висцеральный жир"},
+      "bmr": {"name": "Базовый обмен"},
+      "metabolic_age": {"name": "Метаболический возраст"},
+      "body_type": {"name": "Тип тела"},
+      "protein": {"name": "Протеины"},
+      "fat_free_mass": {"name": "Масса без жира"},
+      "subcutaneous_fat": {"name": "Подкожный жир"},
+      "heart_rate": {"name": "Пульс"}
     }
   }
 }
