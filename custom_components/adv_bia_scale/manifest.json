@@ -2,10 +2,10 @@
   "domain": "adv_bia_scale",
   "name": "OKOK ADV BIA Scale",
   "version": "1.0.0",
-  "documentation": "https://github.com/blendmind/adv_bia_scale",
-  "issue_tracker": "https://github.com/blendmind/adv_bia_scale/issues",
+  "documentation": "https://github.com/uglyrusty589-cloud/adv_bia_scale",
+  "issue_tracker": "https://github.com/uglyrusty589-cloud/adv_bia_scale/issues",
   "dependencies": ["bluetooth"],
-  "codeowners": ["@blendmind"],
+  "codeowners": ["@uglyrusty589-cloud"],
   "config_flow": true,
   "bluetooth": [
     {

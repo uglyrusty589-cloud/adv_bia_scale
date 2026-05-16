@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up BIA Scale",
+        "title": "OKOK ADV BIA Scale Setup",
         "description": "Configure your profile. BIA measurements will be calculated based on this data.",
         "data": {
           "mac": "Scale MAC address",
@@ -15,9 +15,9 @@
       }
     },
     "error": {
-      "invalid_height": "Height must be between 50 and 250 cm",
-      "invalid_age": "Age must be between 5 and 120 years",
-      "invalid_input": "Invalid data format",
+      "invalid_height": "Height must be 50–250 cm",
+      "invalid_age": "Age must be 5–120 years",
+      "invalid_input": "Invalid input format",
       "cannot_connect": "Connection error",
       "invalid_auth": "Authentication error",
       "unknown": "Unknown error"
@@ -30,7 +30,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "BIA Scale Settings",
+        "title": "BIA Scale Profile Settings",
         "description": "Update your profile. New measurements will be recalculated automatically.",
         "data": {
           "height": "Height, cm (50–250)",
@@ -50,10 +50,59 @@
     "activity_level": {
       "options": {
         "sedentary": "Sedentary (1.2)",
-        "light": "Light activity (1.375)",
-        "moderate": "Moderate activity (1.55)",
+        "light": "Lightly active (1.375)",
+        "moderate": "Moderately active (1.55)",
         "active": "Active (1.725)",
         "very_active": "Very active (1.9)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "weight": {
+        "name": "Weight"
+      },
+      "impedance": {
+        "name": "Impedance"
+      },
+      "bmi": {
+        "name": "BMI"
+      },
+      "body_fat": {
+        "name": "Body Fat"
+      },
+      "muscle_mass": {
+        "name": "Muscle Mass"
+      },
+      "water": {
+        "name": "Body Water"
+      },
+      "bone_mass": {
+        "name": "Bone Mass"
+      },
+      "visceral_fat": {
+        "name": "Visceral Fat"
+      },
+      "bmr": {
+        "name": "Basal Metabolic Rate"
+      },
+      "metabolic_age": {
+        "name": "Metabolic Age"
+      },
+      "body_type": {
+        "name": "Body Type"
+      },
+      "protein": {
+        "name": "Protein"
+      },
+      "fat_free_mass": {
+        "name": "Fat-Free Mass"
+      },
+      "subcutaneous_fat": {
+        "name": "Subcutaneous Fat"
+      },
+      "heart_rate": {
+        "name": "Heart Rate"
       }
     }
   }

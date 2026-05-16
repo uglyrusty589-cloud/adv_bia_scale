@@ -1,4 +1,4 @@
-"""Config flow для интеграции BIA Весы."""
+"""Config flow для интеграции OKOK ADV BIA Scale."""
 
 from __future__ import annotations
 
@@ -11,6 +11,11 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_MAC, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectOptionDict,
+)
 
 from .const import (
     DOMAIN,
@@ -18,19 +23,22 @@ from .const import (
     CONF_AGE,
     CONF_GENDER,
     CONF_ACTIVITY_LEVEL,
-    ACTIVITY_MULTIPLIERS,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-GENDER_OPTIONS = {"male": "Мужской", "female": "Женский"}
-ACTIVITY_OPTIONS = {
-    "sedentary": "Сидячий (1.2)",
-    "light": "Малая активность (1.375)",
-    "moderate": "Умеренная активность (1.55)",
-    "active": "Активный (1.725)",
-    "very_active": "Очень активный (1.9)",
-}
+GENDER_OPTIONS: list[SelectOptionDict] = [
+    {"value": "male", "label": "Мужской"},
+    {"value": "female", "label": "Женский"},
+]
+
+ACTIVITY_OPTIONS: list[SelectOptionDict] = [
+    {"value": "sedentary", "label": "Сидячий образ жизни (×1.2)"},
+    {"value": "light", "label": "Лёгкая активность (×1.375)"},
+    {"value": "moderate", "label": "Умеренная активность (×1.55)"},
+    {"value": "active", "label": "Высокая активность (×1.725)"},
+    {"value": "very_active", "label": "Очень высокая активность (×1.9)"},
+]
 
 
 class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -69,7 +77,9 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_HEIGHT: height,
                         CONF_AGE: age,
                         CONF_GENDER: user_input.get(CONF_GENDER, "male"),
-                        CONF_ACTIVITY_LEVEL: user_input.get(CONF_ACTIVITY_LEVEL, "moderate"),
+                        CONF_ACTIVITY_LEVEL: user_input.get(
+                            CONF_ACTIVITY_LEVEL, "moderate"
+                        ),
                     },
                 )
 
@@ -78,18 +88,24 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_MAC, default=""): str,
-                    vol.Required(CONF_NAME, default="BIA Весы"): str,
+                    vol.Required(CONF_NAME, default=""): str,
                     vol.Required(CONF_HEIGHT, default=175): vol.All(
                         vol.Coerce(int), vol.Range(min=50, max=250)
                     ),
                     vol.Required(CONF_AGE, default=30): vol.All(
                         vol.Coerce(int), vol.Range(min=5, max=120)
                     ),
-                    vol.Required(CONF_GENDER, default="male"): vol.In(
-                        list(GENDER_OPTIONS.keys())
+                    vol.Required(CONF_GENDER, default="male"): SelectSelector(
+                        SelectSelectorConfig(
+                            options=GENDER_OPTIONS,
+                            translation_key="gender",
+                        )
                     ),
-                    vol.Required(CONF_ACTIVITY_LEVEL, default="moderate"): vol.In(
-                        list(ACTIVITY_OPTIONS.keys())
+                    vol.Required(CONF_ACTIVITY_LEVEL, default="moderate"): SelectSelector(
+                        SelectSelectorConfig(
+                            options=ACTIVITY_OPTIONS,
+                            translation_key="activity_level",
+                        )
                     ),
                 }
             ),
@@ -146,8 +162,15 @@ class AdvBiaScaleOptionsFlow(config_entries.OptionsFlow):
                     ): vol.All(vol.Coerce(int), vol.Range(min=5, max=120)),
                     vol.Required(
                         CONF_ACTIVITY_LEVEL,
-                        default=self.config_entry.data.get(CONF_ACTIVITY_LEVEL, "moderate"),
-                    ): vol.In(list(ACTIVITY_OPTIONS.keys())),
+                        default=self.config_entry.data.get(
+                            CONF_ACTIVITY_LEVEL, "moderate"
+                        ),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=ACTIVITY_OPTIONS,
+                            translation_key="activity_level",
+                        )
+                    ),
                 }
             ),
             errors=errors,

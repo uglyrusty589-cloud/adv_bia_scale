@@ -30,7 +30,7 @@ Supports real-time body composition measurements via passive BLE advertisement m
 
 1. Add this repository as a custom repository in HACS:
    - Go to HACS → Integrations → ⋮ → Custom repositories
-   - Repository URL: `https://github.com/blendmind/adv_bia_scale`
+   - Repository URL: `https://github.com/uglyrusty589-cloud/adv_bia_scale`
    - Category: Integration
 2. Search for "OKOK ADV BIA Scale" and install
 3. Restart Home Assistant
