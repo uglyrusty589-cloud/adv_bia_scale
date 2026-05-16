@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up BIA Scale",
+        "description": "Configure your profile. BIA measurements will be calculated based on this data.",
+        "data": {
+          "mac": "Scale MAC address",
+          "name": "Device name",
+          "height": "Height, cm (50–250)",
+          "age": "Age, years (5–120)",
+          "gender": "Gender",
+          "activity_level": "Activity level"
+        }
+      }
+    },
+    "error": {
+      "invalid_height": "Height must be between 50 and 250 cm",
+      "invalid_age": "Age must be between 5 and 120 years",
+      "invalid_input": "Invalid data format",
+      "cannot_connect": "Connection error",
+      "invalid_auth": "Authentication error",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "not_supported": "Unsupported BLE advertisement format"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BIA Scale Settings",
+        "description": "Update your profile. New measurements will be recalculated automatically.",
+        "data": {
+          "height": "Height, cm (50–250)",
+          "age": "Age, years (5–120)",
+          "activity_level": "Activity level"
+        }
+      }
+    }
+  },
+  "selector": {
+    "gender": {
+      "options": {
+        "male": "Male",
+        "female": "Female"
+      }
+    },
+    "activity_level": {
+      "options": {
+        "sedentary": "Sedentary (1.2)",
+        "light": "Light activity (1.375)",
+        "moderate": "Moderate activity (1.55)",
+        "active": "Active (1.725)",
+        "very_active": "Very active (1.9)"
+      }
+    }
+  }
+}
