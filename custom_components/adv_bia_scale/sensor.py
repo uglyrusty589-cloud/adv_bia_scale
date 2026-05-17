@@ -1,9 +1,8 @@
-"""Пассивный BLE-листенер и вычислитель BIA метрик."""
+"""Пассивный BLE-листенер и вычислитель BIA метрик для мульти-профилей."""
 
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 from typing import Any, Callable
 
 from homeassistant.components.bluetooth import (
@@ -43,6 +42,10 @@ from .const import (
     CONF_BIRTH_DATE,
     CONF_GENDER,
     CONF_ACTIVITY_LEVEL,
+    CONF_USERS,
+    CONF_PROFILE_NAME,
+    CONF_WEIGHT_MIN,
+    CONF_WEIGHT_MAX,
     MANUFACTURER_ID_OKOK,
     calculate_bmi,
     calculate_body_fat,
@@ -64,23 +67,24 @@ from .parser import parse_okok_advertisement
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=30)
-
 
 class BiaScaleCoordinator(DataUpdateCoordinator):
-    """Координатор слушает BLE ADV и считает BIA."""
+    """Координатор слушает BLE ADV для одного MAC и матчит пользователя по весу."""
 
     def __init__(
         self,
         hass: HomeAssistant,
-        entry,
         mac_address: str,
+        device_name: str,
+        users: list[dict[str, Any]],
     ) -> None:
         """Инициализация."""
-        self.entry = entry
         self.mac_address = mac_address.upper()
+        self.device_name = device_name
+        self.users = users
         self._cancel_callback: Callable[[], None] | None = None
         self._latest_raw: dict[str, Any] = {}
+        self._matched_user_index = -1
 
         super().__init__(
             hass,
@@ -108,7 +112,11 @@ class BiaScaleCoordinator(DataUpdateCoordinator):
 
         mfg_data = service_info.manufacturer_data
         if MANUFACTURER_ID_OKOK not in mfg_data:
-            _LOGGER.debug("Manufacturer %s not in data %s", MANUFACTURER_ID_OKOK, mfg_data)
+            _LOGGER.debug(
+                "Manufacturer %s not in data %s",
+                MANUFACTURER_ID_OKOK,
+                mfg_data,
+            )
             return
 
         raw_bytes = mfg_data[MANUFACTURER_ID_OKOK]
@@ -117,56 +125,67 @@ class BiaScaleCoordinator(DataUpdateCoordinator):
         if not parsed:
             return
 
-        self._latest_raw = parsed
-        self.async_set_updated_data(parsed)
+        weight = parsed.get("weight_kg", 0)
+        self._match_user(weight)
+        self._latest_raw = {
+            "raw": parsed,
+            "matched_user_index": self._matched_user_index,
+        }
+        self.async_set_updated_data(self._latest_raw)
 
-    async def async_start(self) -> None:
-        """Запустить слушание BLE."""
-        try:
-            self._cancel_callback = async_register_callback(
-                self.hass,
-                self._async_handle_bluetooth_event,
-                {"address": self.mac_address},
-                BluetoothScanningMode.PASSIVE,
-            )
-            _LOGGER.info("Registered BLE callback for %s", self.mac_address)
-        except Exception as exc:
-            _LOGGER.error("Ошибка регистрации BLE: %s", exc)
-            raise
+    def _match_user(self, weight_kg: float) -> None:
+        """Найти ближайшего пользователя по весу."""
+        if not weight_kg or weight_kg <= 0:
+            self._matched_user_index = -1
+            return
 
-    async def async_shutdown(self) -> None:
-        """Остановить слушание."""
-        if self._cancel_callback:
-            self._cancel_callback()
-            self._cancel_callback = None
+        best_idx = -1
+        best_diff = float("inf")
+        for idx, user in enumerate(self.users):
+            w_min = user.get(CONF_WEIGHT_MIN, 0.0)
+            w_max = user.get(CONF_WEIGHT_MAX, float("inf"))
+            if w_min <= weight_kg <= w_max:
+                diff = 0.0
+            else:
+                diff = min(abs(weight_kg - w_min), abs(weight_kg - w_max))
+            if diff < best_diff:
+                best_diff = diff
+                best_idx = idx
+        self._matched_user_index = best_idx
+        _LOGGER.debug(
+            "Matched user index %s for weight %.1f kg (diff=%.1f)",
+            best_idx,
+            weight_kg,
+            best_diff,
+        )
 
-    def compute_metrics(self) -> dict[str, Any]:
-        """Вычислить все BIA метрики."""
-        data = self._latest_raw
-        if not data or "weight_kg" not in data:
+    @property
+    def matched_user_index(self) -> int:
+        """Индекс последнего сматченного пользователя."""
+        return self._matched_user_index
+
+    def compute_metrics(self, user_index: int) -> dict[str, Any]:
+        """Вычислить все BIA метрики для конкретного пользователя."""
+        data = self._latest_raw.get("raw", {})
+        if not data:
             return {}
 
         weight = data.get("weight_kg", 0)
         impedance = data.get("impedance", 0)
         hr = data.get("heart_rate", 0)
 
-        # If only impedance data (no stabilized weight), return partial data
         if not weight or weight <= 0:
-            _LOGGER.debug("No weight data yet (weight=%.1f), returning impedance only", weight)
-            return {
-                SENSOR_WEIGHT: 0,
-                SENSOR_IMPEDANCE: impedance,
-            }
+            return {}
 
-        height = self.entry.data.get(CONF_HEIGHT, 175)
-        birth_date = self.entry.data.get(CONF_BIRTH_DATE)
-        if birth_date:
-            age = calculate_age(birth_date)
-        else:
-            # Fallback для старых записей (legacy age field или birth_day/month/year)
-            age = self.entry.data.get("age", 30)
-        gender = self.entry.data.get(CONF_GENDER, "male")
-        activity = self.entry.data.get(CONF_ACTIVITY_LEVEL, "moderate")
+        if user_index < 0 or user_index >= len(self.users):
+            return {}
+
+        user = self.users[user_index]
+        height = user.get(CONF_HEIGHT, 175)
+        birth_date = user.get(CONF_BIRTH_DATE)
+        age = calculate_age(birth_date) if birth_date else user.get("age", 30)
+        gender = user.get(CONF_GENDER, "male")
+        activity = user.get(CONF_ACTIVITY_LEVEL, "moderate")
 
         bmi = calculate_bmi(weight, height)
         body_fat = calculate_body_fat(weight, impedance, age, gender, height)
@@ -203,36 +222,64 @@ class BiaScaleCoordinator(DataUpdateCoordinator):
             "raw_hex": data.get("raw_hex"),
         }
 
+    async def async_start(self) -> None:
+        """Запустить слушание BLE."""
+        try:
+            self._cancel_callback = async_register_callback(
+                self.hass,
+                self._async_handle_bluetooth_event,
+                {"address": self.mac_address},
+                BluetoothScanningMode.PASSIVE,
+            )
+            _LOGGER.info("Registered BLE callback for %s", self.mac_address)
+        except Exception as exc:
+            _LOGGER.error("Ошибка регистрации BLE: %s", exc)
+            raise
 
-class BiaScaleSensor(CoordinatorEntity, SensorEntity):
-    """Сенсор BIA Весов."""
+    async def async_shutdown(self) -> None:
+        """Остановить слушание."""
+        if self._cancel_callback:
+            self._cancel_callback()
+            self._cancel_callback = None
+
+
+class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
+    """Сенсор BIA Весов для конкретного профиля пользователя."""
 
     _attr_has_entity_name = True
+    _attr_translation_domain = DOMAIN
 
     def __init__(
         self,
         coordinator: BiaScaleCoordinator,
-        entry,
+        entry_id: str,
+        user_index: int,
+        user_name: str,
         sensor_type: str,
         device_name: str,
     ) -> None:
         """Инициализация."""
         super().__init__(coordinator)
         self._sensor_type = sensor_type
-        self._entry = entry
+        self._user_index = user_index
+        self._user_name = user_name
+        self._entry_id = entry_id
         self._device_name = device_name
-        self._attr_unique_id = f"{entry.entry_id}_{sensor_type}"
+
+        self._attr_unique_id = f"{entry_id}_{user_name}_{sensor_type}"
+        self._attr_translation_key = sensor_type
 
         info = SENSOR_TYPES[sensor_type]
-        self._attr_name = info["name"]
+        # Не устанавливаем _attr_name — используем translation_key
+        # self._attr_name = info["name"]
         self._attr_native_unit_of_measurement = info.get("unit")
         self._attr_device_class = info.get("device_class")
         self._attr_icon = info.get("icon")
         self._attr_state_class = info.get("state_class")
 
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=device_name,
+            identifiers={(DOMAIN, f"{entry_id}_{user_name}")},
+            name=f"{device_name} — {user_name}",
             manufacturer="OKOK / BIA Весы",
             model="Bluetooth-весы с анализатором",
         )
@@ -240,23 +287,58 @@ class BiaScaleSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> Any:
         """Вернуть значение сенсора."""
-        metrics = self.coordinator.compute_metrics()
-        value = metrics.get(self._sensor_type)
-        if value is None:
+        data = self.coordinator.data
+        if not data or "raw" not in data:
             return None
-        return value
+
+        raw = data["raw"]
+        weight = raw.get("weight_kg")
+        impedance = raw.get("impedance")
+
+        # ZeroDivisionError guard: если вес <= 0 — только impedance актуален
+        if weight is None or weight <= 0:
+            if self._sensor_type == SENSOR_IMPEDANCE:
+                return impedance
+            return None
+
+        if self._sensor_type == SENSOR_WEIGHT:
+            return weight
+
+        if self._sensor_type == SENSOR_IMPEDANCE:
+            return impedance
+
+        # Для остальных сенсоров обновляем только сматченного пользователя
+        if self.coordinator.matched_user_index != self._user_index:
+            return None
+
+        metrics = self.coordinator.compute_metrics(self._user_index)
+        return metrics.get(self._sensor_type)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Доп. атрибуты."""
-        if self._sensor_type == SENSOR_WEIGHT:
-            metrics = self.coordinator.compute_metrics()
-            return {
-                "raw_hex": metrics.get("raw_hex"),
-                "status": metrics.get("status"),
-                "tdee": metrics.get("tdee"),
-            }
-        return None
+        """Доп. атрибуты для сенсора веса."""
+        if self._sensor_type != SENSOR_WEIGHT:
+            return None
+
+        data = self.coordinator.data
+        if not data or "raw" not in data:
+            return None
+
+        raw = data["raw"]
+        attrs: dict[str, Any] = {
+            "raw_hex": raw.get("raw_hex"),
+            "status": raw.get("status"),
+        }
+
+        # TDEE добавляем только если пользователь сматчен и вес > 0
+        if (
+            self.coordinator.matched_user_index == self._user_index
+            and raw.get("weight_kg", 0) > 0
+        ):
+            metrics = self.coordinator.compute_metrics(self._user_index)
+            attrs["tdee"] = metrics.get("tdee")
+
+        return attrs
 
 
 async def async_setup_entry(
@@ -264,23 +346,60 @@ async def async_setup_entry(
     entry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Установка платформы."""
+    """Установка платформы sensor."""
     mac = entry.data.get(CONF_MAC)
-    name = entry.data.get(CONF_NAME, "BIA Весы")
+    device_name = entry.data.get(CONF_NAME, "BIA Весы")
+    users = entry.data.get(CONF_USERS, [])
 
     if not mac:
         _LOGGER.error("MAC-адрес не задан")
         return
 
-    coordinator = BiaScaleCoordinator(hass, entry, mac)
+    if not users:
+        _LOGGER.error("Список пользователей пуст")
+        return
+
+    coordinator = BiaScaleCoordinator(hass, mac, device_name, users)
     await coordinator.async_start()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id + "_coordinator"] = coordinator
 
-    entities = [
-        BiaScaleSensor(coordinator, entry, sensor_type, name)
-        for sensor_type in SENSOR_TYPES
-    ]
-    async_add_entities(entities)
+    entities: list[UserBiaScaleSensor] = []
+    entry_id = entry.entry_id
+    for user_index, user in enumerate(users):
+        user_name = user.get(CONF_PROFILE_NAME, f"Пользователь {user_index + 1}")
+        for sensor_type in SENSOR_TYPES:
+            entities.append(
+                UserBiaScaleSensor(
+                    coordinator=coordinator,
+                    entry_id=entry_id,
+                    user_index=user_index,
+                    user_name=user_name,
+                    sensor_type=sensor_type,
+                    device_name=device_name,
+                )
+            )
 
+    async_add_entities(entities)
     await coordinator.async_request_refresh()
+
+    # Cleanup orphaned entities from v1 (legacy single-profile)
+    await _async_cleanup_orphaned_entities(hass, entry, users, entities)
+
+
+async def _async_cleanup_orphaned_entities(
+    hass: HomeAssistant, entry, users: list, new_entities: list
+) -> None:
+    """Remove old v1 entities whose unique_id does not contain a user name."""
+    from homeassistant.helpers.entity_registry import async_get as _er_get
+    entity_reg = _er_get(hass)
+    entry_id = entry.entry_id
+    orphaned = [
+        ent for ent in entity_reg.entities.values()
+        if ent.platform == DOMAIN and ent.config_entry_id == entry_id
+        and ent.unique_id and "_" in ent.unique_id
+        and ent.unique_id.count("_") == 1  # old format: entryId_sensorType
+    ]
+    for ent in orphaned:
+        _LOGGER.info("Removing orphaned entity from v1: %s", ent.entity_id)
+        entity_reg.async_remove(ent.entity_id)

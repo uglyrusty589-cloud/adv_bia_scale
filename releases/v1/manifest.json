@@ -1,7 +1,7 @@
 {
   "domain": "adv_bia_scale",
-  "name": "OKOK ADV BIA Scale (Multi-Profile)",
-  "version": "2.0.0",
+  "name": "OKOK ADV BIA Scale",
+  "version": "1.0.0",
   "documentation": "https://github.com/uglyrusty589-cloud/adv_bia_scale",
   "issue_tracker": "https://github.com/uglyrusty589-cloud/adv_bia_scale/issues",
   "dependencies": ["bluetooth"],

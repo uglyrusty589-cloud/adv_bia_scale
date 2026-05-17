@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Настройка весов BIA",
+        "description": "Настройте ваш профиль. Замеры BIA будут рассчитаны на основе этих данных.",
+        "data": {
+          "mac": "MAC-адрес весов",
+          "name": "Имя устройства",
+          "height": "Рост, см (50–250)",
+          "birth_date": "Дата рождения (DD.MM.YYYY)",
+          "gender": "Пол",
+          "activity_level": "Уровень активности"
+        }
+      }
+    },
+    "error": {
+      "invalid_height": "Рост должен быть от 50 до 250 см",
+      "invalid_date": "Укажите корректную дату рождения",
+      "invalid_date_format": "Формат: DD.MM.YYYY",
+      "invalid_input": "Неверный формат данных",
+      "cannot_connect": "Ошибка подключения",
+      "invalid_auth": "Ошибка аутентификации",
+      "unknown": "Неизвестная ошибка"
+    },
+    "abort": {
+      "already_configured": "Устройство уже настроено",
+      "not_supported": "Неподдерживаемый формат BLE-рекламы"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Настройки профиля весов BIA",
+        "description": "Обновите ваш профиль. Новые замеры будут пересчитаны автоматически.",
+        "data": {
+          "height": "Рост, см (50–250)",
+          "birth_date": "Дата рождения (DD.MM.YYYY)",
+          "gender": "Пол",
+          "activity_level": "Уровень активности"
+        }
+      }
+    }
+  },
+  "selector": {
+    "gender": {
+      "options": {
+        "male": "Мужской",
+        "female": "Женский"
+      }
+    },
+    "activity_level": {
+      "options": {
+        "sedentary": "Сидячий образ жизни (1.2)",
+        "light": "Лёгкая активность (1.375)",
+        "moderate": "Умеренная активность (1.55)",
+        "active": "Высокая активность (1.725)",
+        "very_active": "Очень высокая активность (1.9)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "weight": {"name": "Вес"},
+      "impedance": {"name": "Импеданс"},
+      "bmi": {"name": "ИМТ"},
+      "body_fat": {"name": "Жировая масса"},
+      "muscle_mass": {"name": "Мышечная масса"},
+      "water": {"name": "Вода"},
+      "bone_mass": {"name": "Масса костей"},
+      "visceral_fat": {"name": "Висцеральный жир"},
+      "bmr": {"name": "Базовый обмен"},
+      "metabolic_age": {"name": "Метаболический возраст"},
+      "body_type": {"name": "Тип тела"},
+      "protein": {"name": "Протеины"},
+      "fat_free_mass": {"name": "Масса без жира"},
+      "subcutaneous_fat": {"name": "Подкожный жир"},
+      "heart_rate": {"name": "Пульс"}
+    }
+  }
+}

@@ -139,26 +139,6 @@ CONF_GENDER = "gender"
 CONF_ACTIVITY_LEVEL = "activity_level"
 CONF_SCALE_MAC = "scale_mac"
 
-# Мульти-профиль
-CONF_USERS = "users"
-CONF_PROFILE_NAME = "profile_name"
-CONF_WEIGHT_MIN = "weight_min"
-CONF_WEIGHT_MAX = "weight_max"
-
-# Селекторы
-GENDER_OPTIONS = [
-    {"value": "male", "label": "Мужской"},
-    {"value": "female", "label": "Женский"},
-]
-
-ACTIVITY_OPTIONS = [
-    {"value": "sedentary", "label": "Сидячий образ жизни (×1.2)"},
-    {"value": "light", "label": "Лёгкая активность (×1.375)"},
-    {"value": "moderate", "label": "Умеренная активность (×1.55)"},
-    {"value": "active", "label": "Высокая активность (×1.725)"},
-    {"value": "very_active", "label": "Очень высокая активность (×1.9)"},
-]
-
 GENDER_MALE = "male"
 GENDER_FEMALE = "female"
 
