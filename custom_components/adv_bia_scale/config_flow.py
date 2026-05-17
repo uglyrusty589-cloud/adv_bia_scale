@@ -368,15 +368,43 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Show list of added profiles and allow more or finish."""
-        return self.async_show_menu(
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            action = user_input.get("menu_action")
+            if action == "add_profile":
+                return await self.async_step_add_profile()
+            if action == "finish":
+                return await self.async_step_finish()
+
+        options = [
+            {"value": "add_profile", "label": "Добавить ещё профиль"},
+            {"value": "finish", "label": "Завершить настройку"},
+        ]
+
+        schema = vol.Schema(
+            {
+                vol.Optional("menu_action"): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[opt["value"] for opt in options],
+                        translation_key="menu_action",
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+            }
+        )
+
+        profiles_text = "\n".join(
+            f"• {p[CONF_PROFILE_NAME]} ({p[CONF_HEIGHT]} см)"
+            for p in self._users_list
+        ) or "Нет добавленных профилей"
+
+        return self.async_show_form(
             step_id="profiles",
-            menu_options=["add_profile", "finish"],
+            data_schema=schema,
+            errors=errors,
             description_placeholders={
-                "profiles": "\n".join(
-                    f"• {p[CONF_PROFILE_NAME]} ({p[CONF_HEIGHT]} см)"
-                    for p in self._users_list
-                )
-                or "Нет добавленных профилей",
+                "profiles": profiles_text,
             },
         )
 
@@ -466,8 +494,10 @@ class AdvBiaScaleOptionsFlow(config_entries.OptionsFlow):
             {
                 vol.Required("action"): SelectSelector(
                     SelectSelectorConfig(
-                        options=[opt["value"] for opt in options],
-                        translation_key="options_action",
+                        options=[
+                            {"value": opt["value"], "label": opt["label"]}
+                            for opt in options
+                        ],
                         mode=SelectSelectorMode.LIST,
                     )
                 ),
@@ -579,5 +609,6 @@ class AdvBiaScaleOptionsFlow(config_entries.OptionsFlow):
         """Update config entry data with modified users list."""
         data = {**self.entry.data, CONF_USERS: self._users_list}
         self.hass.config_entries.async_update_entry(self.entry, data=data)
-        await self.hass.config_entries.async_reload(self.entry.entry_id)
+        # Trigger background reload so orphaned entities are cleaned up
+        self.hass.config_entries.async_schedule_reload(self.entry.entry_id)
         return self.async_create_entry(title="", data={})

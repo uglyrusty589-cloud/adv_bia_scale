@@ -295,20 +295,29 @@ class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
         weight = raw.get("weight_kg")
         impedance = raw.get("impedance")
 
-        # ZeroDivisionError guard: если вес <= 0 — только impedance актуален
-        if weight is None or weight <= 0:
-            if self._sensor_type == SENSOR_IMPEDANCE:
-                return impedance
-            return None
+        matched = self.coordinator.matched_user_index
 
+        # Вес и импеданс — общие данные устройства, показываем только
+        # для сматченного профиля; если не сматчено (matched == -1),
+        # показываем только для первого профиля, чтобы не дублировать.
         if self._sensor_type == SENSOR_WEIGHT:
-            return weight
+            if weight is None or weight <= 0:
+                return None
+            if matched == -1:
+                return weight if self._user_index == 0 else None
+            return weight if matched == self._user_index else None
 
         if self._sensor_type == SENSOR_IMPEDANCE:
-            return impedance
+            if matched == -1:
+                return impedance if self._user_index == 0 else None
+            return impedance if matched == self._user_index else None
 
-        # Для остальных сенсоров обновляем только сматченного пользователя
-        if self.coordinator.matched_user_index != self._user_index:
+        # Для остальных сенсоров (BIA-расчёты) обновляем только
+        # если вес > 0 и профиль сматчился
+        if weight is None or weight <= 0:
+            return None
+
+        if matched != self._user_index:
             return None
 
         metrics = self.coordinator.compute_metrics(self._user_index)
@@ -390,16 +399,54 @@ async def async_setup_entry(
 async def _async_cleanup_orphaned_entities(
     hass: HomeAssistant, entry, users: list, new_entities: list
 ) -> None:
-    """Remove old v1 entities whose unique_id does not contain a user name."""
+    """Remove orphaned entities: v1 format AND deleted profiles."""
     from homeassistant.helpers.entity_registry import async_get as _er_get
     entity_reg = _er_get(hass)
     entry_id = entry.entry_id
-    orphaned = [
-        ent for ent in entity_reg.entities.values()
-        if ent.platform == DOMAIN and ent.config_entry_id == entry_id
-        and ent.unique_id and "_" in ent.unique_id
-        and ent.unique_id.count("_") == 1  # old format: entryId_sensorType
-    ]
+
+    # Build valid profile prefixes: entryId_ProfileName_
+    valid_prefixes = {
+        f"{entry_id}_{user.get(CONF_PROFILE_NAME, f'Пользователь {idx + 1}')}_"
+        for idx, user in enumerate(users)
+    }
+
+    orphaned = []
+    for ent in entity_reg.entities.values():
+        if ent.config_entry_id != entry_id:
+            continue
+        if not ent.unique_id:
+            continue
+
+        # v1 format: entryId_sensorType (1 underscore)
+        if ent.unique_id.count("_") == 1:
+            orphaned.append(ent)
+            continue
+
+        # R2 format: entryId_ProfileName_sensorType (2+ underscores)
+        # Check if starts with any valid prefix
+        if not any(ent.unique_id.startswith(prefix) for prefix in valid_prefixes):
+            orphaned.append(ent)
+
     for ent in orphaned:
-        _LOGGER.info("Removing orphaned entity from v1: %s", ent.entity_id)
+        _LOGGER.info("Removing orphaned entity: %s", ent.entity_id)
         entity_reg.async_remove(ent.entity_id)
+
+    # ------------------------------------------------------------------
+    # Also remove orphaned devices (no remaining entities for this entry)
+    # ------------------------------------------------------------------
+    from homeassistant.helpers.device_registry import async_get as _dr_get
+    device_reg = _dr_get(hass)
+    devices = [
+        dev
+        for dev in device_reg.devices.values()
+        if entry_id in dev.config_entries
+    ]
+    for dev in devices:
+        remaining = [
+            ent
+            for ent in entity_reg.entities.values()
+            if ent.device_id == dev.id and ent.config_entry_id == entry_id
+        ]
+        if not remaining:
+            _LOGGER.info("Removing orphaned device: %s", dev.name_by_user or dev.name)
+            device_reg.async_remove_device(dev.id)
