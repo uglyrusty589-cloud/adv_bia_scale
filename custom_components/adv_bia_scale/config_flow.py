@@ -180,7 +180,7 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize flow."""
         self._discovered_mac: str | None = None
         self._users_list: list[dict[str, Any]] = []
-        self._device_name: str = "BIA Весы"
+        self._device_name: str = "OKOK BIA Scale"
         self._device_mac: str = ""
 
     async def async_step_bluetooth(
@@ -213,7 +213,7 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 self._device_mac = mac
 
-            self._device_name = user_input.get(CONF_NAME, "BIA Весы")
+            self._device_name = user_input.get(CONF_NAME, "OKOK BIA Scale")
 
             # Extract profile fields from combined user input
             profile_data = {
@@ -332,7 +332,7 @@ class AdvBiaScaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "device_name": "BIA Весы",
+                "device_name": "OKOK BIA Scale",
             },
         )
 

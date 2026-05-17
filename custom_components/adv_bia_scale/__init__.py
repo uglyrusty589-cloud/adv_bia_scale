@@ -43,7 +43,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         }
         new_data = {
             "mac": old_data.get("mac", ""),
-            "name": old_data.get("name", "BIA Весы"),
+            "name": old_data.get("name", "OKOK BIA Scale"),
             CONF_USERS: [user_profile],
         }
         hass.config_entries.async_update_entry(

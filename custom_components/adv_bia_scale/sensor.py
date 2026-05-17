@@ -89,7 +89,7 @@ class BiaScaleCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"BIA Весы {mac_address}",
+            name=f"OKOK BIA Scale {mac_address}",
             update_interval=None,
         )
 
@@ -280,7 +280,7 @@ class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_{user_name}")},
             name=f"{device_name} — {user_name}",
-            manufacturer="OKOK / BIA Весы",
+            manufacturer="OKOK",
             model="Bluetooth-весы с анализатором",
         )
 
@@ -357,7 +357,7 @@ async def async_setup_entry(
 ) -> None:
     """Установка платформы sensor."""
     mac = entry.data.get(CONF_MAC)
-    device_name = entry.data.get(CONF_NAME, "BIA Весы")
+    device_name = entry.data.get(CONF_NAME, "OKOK BIA Scale")
     users = entry.data.get(CONF_USERS, [])
 
     if not mac:
