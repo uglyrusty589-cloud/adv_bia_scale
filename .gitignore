@@ -3,4 +3,7 @@ __pycache__/
 *.pyo
 .DS_Store
 *.swp
-*.sworeleases/
+*.swp
+releases/
+okok-bia-scale-r2.zip
+okok-bia-scale-*.zip
