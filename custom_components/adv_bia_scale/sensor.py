@@ -10,7 +10,7 @@ from homeassistant.components.bluetooth import (
     async_register_callback,
 )
 from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import RestoreSensor, SensorEntity
 from homeassistant.const import CONF_MAC, CONF_NAME
 from homeassistant.core import HomeAssistant, callback as ha_callback
 from homeassistant.helpers.entity import DeviceInfo
@@ -243,7 +243,7 @@ class BiaScaleCoordinator(DataUpdateCoordinator):
             self._cancel_callback = None
 
 
-class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
+class UserBiaScaleSensor(CoordinatorEntity, RestoreSensor):
     """Сенсор BIA Весов для конкретного профиля пользователя."""
 
     _attr_has_entity_name = True
@@ -270,8 +270,6 @@ class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
         self._attr_translation_key = sensor_type
 
         info = SENSOR_TYPES[sensor_type]
-        # Не устанавливаем _attr_name — используем translation_key
-        # self._attr_name = info["name"]
         self._attr_native_unit_of_measurement = info.get("unit")
         self._attr_device_class = info.get("device_class")
         self._attr_icon = info.get("icon")
@@ -284,9 +282,33 @@ class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
             model="Bluetooth-весы с анализатором",
         )
 
-    @property
-    def native_value(self) -> Any:
-        """Вернуть значение сенсора."""
+        # Последнее известное значение (для fallback когда BLE данных нет)
+        self._last_value: Any = None
+
+    async def async_added_to_hass(self) -> None:
+        """Вызвано когда сенсор добавлен в HA."""
+        await super().async_added_to_hass()
+        # Восстановить последнее значение из прошлого состояния
+        last_state = await self.async_get_last_sensor_data()
+        if last_state is not None:
+            self._last_value = last_state.native_value
+            _LOGGER.debug(
+                "Restored %s = %s",
+                self._attr_unique_id,
+                self._last_value,
+            )
+
+    @ha_callback
+    def _handle_coordinator_update(self) -> None:
+        """Вызывается при обновлении координатора."""
+        # Сначала обновляем _last_value новым значением
+        new_value = self._compute_native_value()
+        if new_value is not None:
+            self._last_value = new_value
+        super()._handle_coordinator_update()
+
+    def _compute_native_value(self) -> Any:
+        """Вычислить значение из координатора (без fallback на _last_value)."""
         data = self.coordinator.data
         if not data or "raw" not in data:
             return None
@@ -322,6 +344,15 @@ class UserBiaScaleSensor(CoordinatorEntity, SensorEntity):
 
         metrics = self.coordinator.compute_metrics(self._user_index)
         return metrics.get(self._sensor_type)
+
+    @property
+    def native_value(self) -> Any:
+        """Вернуть значение сенсора — fallback на последнее известное значение."""
+        fresh = self._compute_native_value()
+        if fresh is not None:
+            return fresh
+        # Если свежих данных нет — показываем последнее запомненное
+        return self._last_value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
